@@ -34,4 +34,10 @@ Visitors upload a photo, pick one of four Salem candidates, and download it with
 - `src/lib/render-frame.ts` handles drawing and exporting.
 - `src/lib/frames.ts` defines the four candidates. Until real artwork arrives, each one draws a placeholder ring. See `public/frames/README.md` to plug in the final PNGs.
 
-**Redirect:** `src/proxy.ts` currently sends every route to `/halloween-2026`. Delete that file to bring back the home page and the rest of the site.
+**Redirect (temporary):** `src/app/page.tsx` redirects `/` to `/halloween-2026`, and `src/app/not-found.tsx` (exported as `404.html`) sends every unknown URL there. To bring the home page back, replace `src/app/page.tsx` with `src/app/_home/page.tsx` and remove the redirect in `not-found.tsx`.
+
+## Deploying (GitHub Pages)
+
+The site is a static export (`output: "export"`). `.github/workflows/deploy.yml` builds it and publishes it to GitHub Pages on every push to `main`. One-time setup: in the repo, go to **Settings → Pages → Build and deployment → Source** and choose **GitHub Actions**.
+
+The workflow sets `NEXT_PUBLIC_BASE_PATH` (e.g. `/salem-fan-page`) because Pages serves the site from a sub-path. To preview the export locally: `pnpm build`, then serve `out/`.

@@ -53,7 +53,8 @@ export function loadOverlay(src: string) {
       const img = new Image()
       img.onload = () => resolve(img)
       img.onerror = reject
-      img.src = src
+      // Public files live under the basePath on GitHub Pages
+      img.src = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}${src}`
     })
     overlayCache.set(src, pending)
   }
