@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <radialGradient id="sky" cx="50%" cy="30%" r="75%">
+      <stop offset="0" stop-color="#5b4a70"/>
+      <stop offset="1" stop-color="#1c1722"/>
+    </radialGradient>
+  </defs>
+  <circle cx="32" cy="32" r="31" fill="url(#sky)" stroke="#d4af4f" stroke-width="2"/>
+  <!-- crescent moon -->
+  <path d="M46 8a8 8 0 1 0 7 13a6.5 6.5 0 1 1-7-13z" fill="#f0d27a"/>
+  <!-- Salem's head -->
+  <path d="M12 52V22l9 8a22 22 0 0 1 22 0l9-8v30a20 15 0 0 1-40 0z" fill="#07040d"/>
+  <!-- eyes -->
+  <ellipse cx="24" cy="41" rx="4.6" ry="3.8" fill="#f0d27a"/>
+  <ellipse cx="40" cy="41" rx="4.6" ry="3.8" fill="#f0d27a"/>
+  <rect x="23.1" y="38" width="1.8" height="6" rx=".9" fill="#07040d"/>
+  <rect x="39.1" y="38" width="1.8" height="6" rx=".9" fill="#07040d"/>
+</svg>

@@ -1,69 +1,148 @@
-import Image from "next/image";
+import { Panel } from "@/components/panel";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
+// Placeholder content — swap in real quotes and episodes later.
+const TICKER = [
+  "All hail Salem, future ruler of the world",
+  "Feed the cat",
+  "A hundred years as a cat is cruel and unusual",
+  "Now with fifty percent more sarcasm",
+];
+
+const QUOTES = [
+  "Placeholder: a scheme for world domination, delivered from the kitchen counter.",
+  "Placeholder: a complaint about the quality of the tuna.",
+  "Placeholder: an unsolicited opinion on Sabrina's love life.",
+];
+
+const EPISODES = [
+  { season: "I", title: "Placeholder episode title", note: "Why it rules" },
+  { season: "II", title: "Placeholder episode title", note: "Why it rules" },
+  { season: "III", title: "Placeholder episode title", note: "Why it rules" },
+];
 
 export default function Home() {
+  const ticker = TICKER.join("   ✦   ");
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-10 px-4 py-12">
+      <header className="flex flex-col items-center gap-3 text-center">
+        <p className="font-heading text-xs tracking-[0.35em] text-salem-eye uppercase">
+          Welcome to
+        </p>
+        <h1 className="text-glow font-script text-6xl leading-tight text-primary-foreground sm:text-7xl">
+          Salem&apos;s Lair
+        </h1>
+        <p className="text-xl text-muted-foreground italic">
+          A devoted shrine to Salem Saberhagen, warlock, cat, and would-be
+          ruler of the world
+        </p>
+      </header>
+
+      <div className="overflow-hidden border-y border-salem-eye/20 py-2 text-lg text-salem-eye/80 italic">
+        <div className="flex w-max animate-marquee whitespace-nowrap">
+          <span className="pr-12">{ticker}   ✦</span>
+          <span className="pr-12" aria-hidden>
+            {ticker}   ✦
+          </span>
+        </div>
+      </div>
+
+      <Panel title="About Salem">
+        <div className="flex flex-col gap-3 text-xl leading-snug">
+          <p>
+            Salem Saberhagen was once a 500-year-old warlock. Then he tried to
+            take over the world, and the Witches&apos; Council sentenced him to
+            100 years as a house cat with the Spellman family.
           </p>
+          <p>He has not stopped scheming, sulking, or demanding snacks since.</p>
+          <div className="flex flex-wrap gap-3 pt-2">
+            <Tooltip>
+              <TooltipTrigger render={<Button size="lg" />}>
+                Sign the guestbook
+              </TooltipTrigger>
+              <TooltipContent className="text-base">
+                Coming soon, like world domination
+              </TooltipContent>
+            </Tooltip>
+            <Button variant="gold" size="lg">
+              Feed Salem
+            </Button>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+      </Panel>
+
+      <Panel title="The Salem files">
+        <Tabs defaultValue="bio">
+          <TabsList variant="line" className="w-full justify-center">
+            {[
+              ["bio", "Bio"],
+              ["quotes", "Quotes"],
+              ["episodes", "Favourites"],
+            ].map(([value, label]) => (
+              <TabsTrigger
+                key={value}
+                value={value}
+                className="flex-none px-4 font-heading text-xs tracking-[0.15em] uppercase data-active:text-salem-eye!"
+              >
+                {label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+
+          <TabsContent value="bio" className="pt-4 text-xl">
+            <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1">
+              <dt className="text-salem-eye italic">Name</dt>
+              <dd>Salem Saberhagen</dd>
+              <dt className="text-salem-eye italic">Species</dt>
+              <dd>Warlock (currently: cat)</dd>
+              <dt className="text-salem-eye italic">Sentence</dt>
+              <dd>100 years, no parole</dd>
+              <dt className="text-salem-eye italic">Hobbies</dt>
+              <dd>Plotting, napping, tuna</dd>
+            </dl>
+          </TabsContent>
+
+          <TabsContent value="quotes" className="pt-4 text-xl">
+            <ul className="flex flex-col gap-2">
+              {QUOTES.map((quote) => (
+                <li key={quote} className="italic before:mr-2 before:text-salem-eye before:content-['✦']">
+                  {quote}
+                </li>
+              ))}
+            </ul>
+          </TabsContent>
+
+          <TabsContent value="episodes" className="pt-4 text-xl">
+            <ul className="flex flex-col gap-2">
+              {EPISODES.map((ep, i) => (
+                <li key={i} className="flex gap-3">
+                  <span className="font-heading text-sm leading-7 text-salem-eye">
+                    {ep.season}
+                  </span>
+                  <span>
+                    {ep.title} — <span className="text-muted-foreground italic">{ep.note}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </TabsContent>
+        </Tabs>
+      </Panel>
+
+      <footer className="mt-auto flex flex-col items-center gap-3 text-center">
+        <Separator className="bg-linear-to-r from-transparent via-salem-eye/40 to-transparent" />
+        <p className="font-script text-3xl text-muted-foreground">
+          Made with mischief in Westbridge
+        </p>
+      </footer>
     </div>
   );
 }

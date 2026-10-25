@@ -1,36 +1,37 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Salem's Lair
 
-## Getting Started
+A dark, witchy fan page for Salem Saberhagen, the cat from *Sabrina the Teenage Witch*.
 
-First, run the development server:
+Next.js (App Router) · Tailwind v4 · shadcn/ui (Base UI) · pnpm
+
+## Run
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
+pnpm dev      # http://localhost:3000
+pnpm build
+pnpm lint
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Theme
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The site is dark only. All tokens live in `src/app/globals.css`:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Colors: near-black background, deep witchy purple `primary`, dark plum `accent`, and an antique-gold `salem-eye` used for focus rings, titles and highlights.
+- `--radius: 0.375rem` for softly rounded corners.
+- Utilities: `panel` (bordered surface with a soft purple glow), `panel-inset` (recessed surface), `glow`, `text-glow`, `animate-marquee` and `animate-float`. The animations turn off when the user prefers reduced motion.
+- Fonts (set in `src/app/layout.tsx`): Great Vibes script (`font-script`) for display headings, Cinzel (`font-heading`) for labels and buttons, and Cormorant Garamond (`font-sans`) for body text.
 
-## Learn More
+Components: `src/components/panel.tsx` is a titled panel built on `Card`. `Button` adds a `gold` outline variant, and its default variant is restyled.
 
-To learn more about Next.js, take a look at the following resources:
+Add more shadcn components with `pnpm dlx shadcn@latest add <name>`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Halloween 2026 Election (`/halloween-2026`)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Visitors upload a photo, pick one of four Salem candidates, and download it with a round profile-picture frame as a 1080×1080 PNG. They can also download all four at once. Everything runs in the browser on a `<canvas>`, so photos never leave the device.
 
-## Deploy on Vercel
+- `src/components/frame-maker.tsx` is the upload, preview, zoom/drag and download UI.
+- `src/lib/render-frame.ts` handles drawing and exporting.
+- `src/lib/frames.ts` defines the four candidates. Until real artwork arrives, each one draws a placeholder ring. See `public/frames/README.md` to plug in the final PNGs.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+**Redirect:** `src/proxy.ts` currently sends every route to `/halloween-2026`. Delete that file to bring back the home page and the rest of the site.
