@@ -129,17 +129,17 @@ function FrameMaker() {
     }
   }
 
-  function onPointerDown(e: React.PointerEvent<HTMLCanvasElement>) {
+  function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
     if (!photo) return
     e.currentTarget.setPointerCapture(e.pointerId)
     dragRef.current = { x: e.clientX, y: e.clientY }
   }
 
-  function onPointerMove(e: React.PointerEvent<HTMLCanvasElement>) {
+  function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
     const last = dragRef.current
     if (!photo || !last) return
-    // Pan is measured against the photo circle, not the whole canvas
-    const box = e.currentTarget.clientWidth * PHOTO_RADIUS * 2
+    // The handle is exactly the photo circle, so pan is relative to its width
+    const box = e.currentTarget.clientWidth
     const dx = (e.clientX - last.x) / box
     const dy = (e.clientY - last.y) / box
     dragRef.current = { x: e.clientX, y: e.clientY }
@@ -257,22 +257,32 @@ function FrameMaker() {
         <Panel title="Adjust & download">
           <div className="flex flex-col items-center gap-5">
             <div className="flex w-full max-w-md flex-col items-center gap-2">
-              <canvas
-                ref={previewRef}
-                width={PREVIEW_SIZE}
-                height={PREVIEW_SIZE}
-                aria-label={`${frame.name}, ${style.name}, preview`}
-                aria-describedby="drag-tip"
-                onPointerDown={onPointerDown}
-                onPointerMove={onPointerMove}
-                onPointerUp={onPointerUp}
-                onPointerCancel={onPointerUp}
-                style={checker}
-                className={cn(
-                  "block aspect-square w-full touch-none rounded-md",
-                  photo && "cursor-grab active:cursor-grabbing"
+              <div className="relative w-full">
+                <canvas
+                  ref={previewRef}
+                  width={PREVIEW_SIZE}
+                  height={PREVIEW_SIZE}
+                  aria-label={`${frame.name}, ${style.name}, preview`}
+                  aria-describedby="drag-tip"
+                  style={checker}
+                  className="block aspect-square w-full rounded-md"
+                />
+                {/* Only the photo circle is draggable, and it alone blocks touch
+                    scrolling; swipes elsewhere on the preview scroll the page. */}
+                {photo && (
+                  <div
+                    aria-hidden
+                    onPointerDown={onPointerDown}
+                    onPointerMove={onPointerMove}
+                    onPointerUp={onPointerUp}
+                    onPointerCancel={onPointerUp}
+                    className="absolute cursor-grab touch-none rounded-full active:cursor-grabbing"
+                    style={{
+                      inset: `${(0.5 - PHOTO_RADIUS) * 100}%`,
+                    }}
+                  />
                 )}
-              />
+              </div>
               <p
                 id="drag-tip"
                 className="flex items-center gap-2 text-base text-muted-foreground italic"
