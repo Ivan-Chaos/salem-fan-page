@@ -6,71 +6,94 @@ import { ImagePlus } from "lucide-react"
 
 import { Panel } from "@/components/panel"
 import { Button } from "@/components/ui/button"
-import { FRAMES, type Frame, type FrameId } from "@/lib/frames"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import {
+  BACKGROUNDS,
+  FRAMES,
+  STYLES,
+  overlayPath,
+  type BackgroundId,
+  type Frame,
+  type FrameId,
+  type StyleId,
+} from "@/lib/frames"
 import {
   DEFAULT_ADJUST,
+  PHOTO_RADIUS,
   clampAdjust,
   downloadFile,
   exportPng,
-  loadFonts,
   loadOverlay,
   renderFramed,
   type Adjust,
 } from "@/lib/render-frame"
 
 const MAX_FILE_BYTES = 20 * 1024 * 1024
-const PREVIEW_SIZE = 720
-const THUMB_SIZE = 240
+const PREVIEW_SIZE = 768
+const THUMB_SIZE = 256
 
-type Overlays = Partial<Record<FrameId, HTMLImageElement>>
+// Shown behind canvases when the background is transparent
+const CHECKERBOARD = {
+  background: "repeating-conic-gradient(#24202a 0 25%, #16131a 0 50%) 0 0 / 16px 16px",
+}
 
 function FrameMaker() {
   const [photo, setPhoto] = React.useState<ImageBitmap | null>(null)
-  const [selectedId, setSelectedId] = React.useState<FrameId>(FRAMES[0].id)
+  const [frameId, setFrameId] = React.useState<FrameId>(FRAMES[0].id)
+  const [styleId, setStyleId] = React.useState<StyleId>("full")
+  const [backgroundId, setBackgroundId] = React.useState<BackgroundId>("dark")
   const [adjust, setAdjust] = React.useState<Adjust>(DEFAULT_ADJUST)
   const [error, setError] = React.useState<string | null>(null)
   const [dragOver, setDragOver] = React.useState(false)
   const [busy, setBusy] = React.useState(false)
-  const [fontsReady, setFontsReady] = React.useState(false)
-  const [overlays, setOverlays] = React.useState<Overlays>({})
+  const [overlays, setOverlays] = React.useState<Record<string, HTMLImageElement>>({})
   const [canShare, setCanShare] = React.useState(false)
 
   const inputRef = React.useRef<HTMLInputElement>(null)
   const previewRef = React.useRef<HTMLCanvasElement>(null)
-  const thumbRefs = React.useRef<Partial<Record<FrameId, HTMLCanvasElement | null>>>({})
+  const frameThumbRefs = React.useRef<Partial<Record<FrameId, HTMLCanvasElement | null>>>({})
+  const styleThumbRefs = React.useRef<Partial<Record<StyleId, HTMLCanvasElement | null>>>({})
   const dragRef = React.useRef<{ x: number; y: number } | null>(null)
 
-  const selected = FRAMES.find((f) => f.id === selectedId)!
+  const frame = FRAMES.find((f) => f.id === frameId)!
+  const style = STYLES.find((s) => s.id === styleId)!
+  const background = BACKGROUNDS.find((b) => b.id === backgroundId)!
 
   React.useEffect(() => {
-    loadFonts().finally(() => setFontsReady(true))
-
-    Promise.all(
-      FRAMES.filter((f) => f.overlaySrc).map(async (f) => {
-        const img = await loadOverlay(f.overlaySrc!).catch(() => undefined)
-        return [f.id, img] as const
-      })
-    ).then((entries) => setOverlays(Object.fromEntries(entries)))
-
     const probe = new File([""], "probe.png", { type: "image/png" })
     Promise.resolve().then(() =>
       setCanShare(Boolean(navigator.canShare?.({ files: [probe] })))
     )
   }, [])
 
+  // Load only the artwork currently on screen: every candidate in the chosen
+  // style, plus every style of the chosen candidate.
+  React.useEffect(() => {
+    const paths = new Set([
+      ...FRAMES.map((f) => overlayPath(f, styleId)),
+      ...STYLES.map((s) => overlayPath(frame, s.id)),
+    ])
+    for (const path of paths) {
+      loadOverlay(path)
+        .then((img) => setOverlays((o) => (o[path] ? o : { ...o, [path]: img })))
+        .catch(() => setError("Some frame artwork failed to load. Try refreshing."))
+    }
+  }, [frame, styleId])
+
   React.useEffect(() => () => photo?.close(), [photo])
 
   React.useEffect(() => {
     const raf = requestAnimationFrame(() => {
-      const draw = (canvas: HTMLCanvasElement | null | undefined, frame: Frame) => {
+      const draw = (canvas: HTMLCanvasElement | null | undefined, f: Frame, s: StyleId) => {
         const ctx = canvas?.getContext("2d")
-        if (ctx) renderFramed(ctx, photo, frame, adjust, overlays[frame.id])
+        if (ctx) renderFramed(ctx, photo, adjust, background.color, overlays[overlayPath(f, s)])
       }
-      draw(previewRef.current, selected)
-      FRAMES.forEach((f) => draw(thumbRefs.current[f.id], f))
+      draw(previewRef.current, frame, styleId)
+      FRAMES.forEach((f) => draw(frameThumbRefs.current[f.id], f, styleId))
+      STYLES.forEach((s) => draw(styleThumbRefs.current[s.id], frame, s.id))
     })
     return () => cancelAnimationFrame(raf)
-  }, [photo, selected, adjust, overlays, fontsReady])
+  }, [photo, frame, styleId, background, adjust, overlays])
 
   async function acceptFile(file: File | undefined) {
     if (!file) return
@@ -103,9 +126,10 @@ function FrameMaker() {
   function onPointerMove(e: React.PointerEvent<HTMLCanvasElement>) {
     const last = dragRef.current
     if (!photo || !last) return
-    const width = e.currentTarget.clientWidth
-    const dx = (e.clientX - last.x) / width
-    const dy = (e.clientY - last.y) / width
+    // Pan is measured against the photo circle, not the whole canvas
+    const box = e.currentTarget.clientWidth * PHOTO_RADIUS * 2
+    const dx = (e.clientX - last.x) / box
+    const dy = (e.clientY - last.y) / box
     dragRef.current = { x: e.clientX, y: e.clientY }
     setAdjust((a) => clampAdjust(photo, { ...a, x: a.x + dx, y: a.y + dy }))
   }
@@ -114,15 +138,22 @@ function FrameMaker() {
     dragRef.current = null
   }
 
-  async function download(frames: Frame[]) {
+  async function render(s: StyleId) {
+    const overlay = await loadOverlay(overlayPath(frame, s))
+    return exportPng(photo!, adjust, background.color, overlay, `salem-2026-${frame.id}-${s}.png`)
+  }
+
+  async function download(styleIds: StyleId[]) {
     if (!photo) return
     setBusy(true)
     try {
-      for (const frame of frames) {
-        downloadFile(await exportPng(photo, frame, adjust, overlays[frame.id]))
+      for (const s of styleIds) {
+        downloadFile(await render(s))
         // Browsers drop rapid back-to-back downloads
-        if (frames.length > 1) await new Promise((r) => setTimeout(r, 400))
+        if (styleIds.length > 1) await new Promise((r) => setTimeout(r, 400))
       }
+    } catch {
+      setError("Something went wrong making your image. Try again.")
     } finally {
       setBusy(false)
     }
@@ -130,9 +161,11 @@ function FrameMaker() {
 
   async function share() {
     if (!photo) return
-    const file = await exportPng(photo, selected, adjust, overlays[selected.id])
-    await navigator.share({ files: [file], title: selected.name }).catch(() => {})
+    const file = await render(styleId)
+    await navigator.share({ files: [file], title: frame.name }).catch(() => {})
   }
+
+  const checker = background.color ? undefined : CHECKERBOARD
 
   return (
     <div className="flex flex-col gap-6">
@@ -182,16 +215,16 @@ function FrameMaker() {
 
       <div className="grid gap-6 md:grid-cols-[minmax(0,17rem)_minmax(0,1fr)]">
         <Panel title="Choose your Salem">
-          <div role="radiogroup" aria-label="Frame" className="grid grid-cols-2 gap-3">
-            {FRAMES.map((frame) => {
-              const active = frame.id === selectedId
+          <div role="radiogroup" aria-label="Candidate" className="grid grid-cols-2 gap-3">
+            {FRAMES.map((f) => {
+              const active = f.id === frameId
               return (
                 <button
-                  key={frame.id}
+                  key={f.id}
                   type="button"
                   role="radio"
                   aria-checked={active}
-                  onClick={() => setSelectedId(frame.id)}
+                  onClick={() => setFrameId(f.id)}
                   className={cn(
                     "flex flex-col items-center gap-2 rounded-md border p-2 outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring",
                     active ? "border-salem-eye/60 bg-muted" : "border-transparent"
@@ -199,16 +232,14 @@ function FrameMaker() {
                 >
                   <canvas
                     ref={(el) => {
-                      thumbRefs.current[frame.id] = el
+                      frameThumbRefs.current[f.id] = el
                     }}
                     width={THUMB_SIZE}
                     height={THUMB_SIZE}
-                    className={cn(
-                      "aspect-square w-full rounded-full",
-                      active && "ring-2 ring-salem-eye ring-offset-2 ring-offset-card"
-                    )}
+                    style={checker}
+                    className="aspect-square w-full rounded-sm"
                   />
-                  <span className="text-base leading-tight">{frame.name}</span>
+                  <span className="text-base leading-tight">{f.name}</span>
                 </button>
               )
             })}
@@ -216,22 +247,85 @@ function FrameMaker() {
         </Panel>
 
         <Panel title="Adjust & download">
-          <div className="flex flex-col items-center gap-4">
-            <canvas
-              ref={previewRef}
-              width={PREVIEW_SIZE}
-              height={PREVIEW_SIZE}
-              aria-label={`${selected.name} frame preview`}
-              onPointerDown={onPointerDown}
-              onPointerMove={onPointerMove}
-              onPointerUp={onPointerUp}
-              onPointerCancel={onPointerUp}
-              className={cn(
-                "aspect-square w-full max-w-md touch-none rounded-full",
-                photo && "cursor-grab active:cursor-grabbing"
-              )}
-            />
-            <p className="font-script text-4xl text-salem-eye">{selected.name}</p>
+          <div className="flex flex-col items-center gap-5">
+            <Tooltip disabled={!photo} trackCursorAxis="both">
+              <TooltipTrigger render={<div className="w-full max-w-md" />}>
+                <canvas
+                  ref={previewRef}
+                  width={PREVIEW_SIZE}
+                  height={PREVIEW_SIZE}
+                  aria-label={`${frame.name}, ${style.name}, preview`}
+                  onPointerDown={onPointerDown}
+                  onPointerMove={onPointerMove}
+                  onPointerUp={onPointerUp}
+                  onPointerCancel={onPointerUp}
+                  style={checker}
+                  className={cn(
+                    "block aspect-square w-full touch-none rounded-md",
+                    photo && "cursor-grab active:cursor-grabbing"
+                  )}
+                />
+              </TooltipTrigger>
+              <TooltipContent className="text-base">Drag to reposition</TooltipContent>
+            </Tooltip>
+            <p className="font-script text-4xl text-salem-eye">{frame.name}</p>
+
+            <fieldset className="w-full max-w-md">
+              <legend className="mb-2 font-heading text-xs tracking-[0.15em] uppercase">
+                Variant
+              </legend>
+              <div role="radiogroup" aria-label="Variant" className="grid grid-cols-3 gap-2">
+                {STYLES.map((s) => {
+                  const active = s.id === styleId
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={active}
+                      onClick={() => setStyleId(s.id)}
+                      className={cn(
+                        "flex flex-col items-center gap-1 rounded-md border p-1.5 outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring",
+                        active ? "border-salem-eye/60 bg-muted" : "border-border"
+                      )}
+                    >
+                      <canvas
+                        ref={(el) => {
+                          styleThumbRefs.current[s.id] = el
+                        }}
+                        width={THUMB_SIZE}
+                        height={THUMB_SIZE}
+                        style={checker}
+                        className="aspect-square w-full rounded-sm"
+                      />
+                      <span className="text-base leading-tight">{s.name}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </fieldset>
+
+            <fieldset className="flex w-full max-w-md items-center gap-3">
+              <legend className="sr-only">Background</legend>
+              <span aria-hidden className="font-heading text-xs tracking-[0.15em] uppercase">
+                Background
+              </span>
+              <div role="radiogroup" aria-label="Background" className="flex flex-1 gap-1">
+                {BACKGROUNDS.map((b) => (
+                  <Button
+                    key={b.id}
+                    role="radio"
+                    aria-checked={b.id === backgroundId}
+                    variant={b.id === backgroundId ? "gold" : "ghost"}
+                    size="sm"
+                    onClick={() => setBackgroundId(b.id)}
+                    className="flex-1 font-sans text-base tracking-normal normal-case"
+                  >
+                    {b.name}
+                  </Button>
+                ))}
+              </div>
+            </fieldset>
 
             <div className="flex w-full max-w-md items-center gap-3">
               <label htmlFor="zoom" className="font-heading text-xs tracking-[0.15em] uppercase">
@@ -263,18 +357,18 @@ function FrameMaker() {
                 Reset
               </Button>
             </div>
-            {photo && (
-              <p className="text-base text-muted-foreground italic">
-                Drag the photo to reposition it.
-              </p>
-            )}
 
             <div className="flex flex-wrap justify-center gap-3">
-              <Button size="lg" disabled={!photo || busy} onClick={() => download([selected])}>
+              <Button size="lg" disabled={!photo || busy} onClick={() => download([styleId])}>
                 Download
               </Button>
-              <Button variant="gold" size="lg" disabled={!photo || busy} onClick={() => download(FRAMES)}>
-                Download all 4
+              <Button
+                variant="gold"
+                size="lg"
+                disabled={!photo || busy}
+                onClick={() => download(STYLES.map((s) => s.id))}
+              >
+                All 3 variants
               </Button>
               {canShare && (
                 <Button variant="gold" size="lg" disabled={!photo || busy} onClick={share}>
@@ -286,9 +380,15 @@ function FrameMaker() {
         </Panel>
       </div>
 
-      <p className="text-center text-base text-muted-foreground italic">
-        Your photo is processed on your device and never uploaded anywhere.
-      </p>
+      <footer className="flex flex-col items-center gap-2 text-center text-base text-muted-foreground italic">
+        <p className="max-w-2xl">
+          An unofficial fan project. Sabrina the Teenage Witch and Salem
+          Saberhagen are owned by Archie Comic Publications, Inc.; the
+          1996–2003 television series belongs to Paramount. All rights remain
+          with their respective owners.
+        </p>
+        <p>Your photo is processed on your device and never uploaded anywhere.</p>
+      </footer>
     </div>
   )
 }

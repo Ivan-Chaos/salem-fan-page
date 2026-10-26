@@ -1,19 +1,19 @@
 # Campaign frame artwork
 
-Put the final frame overlays here, one per candidate:
+Each candidate has three variants, shown on the site as Variant 1, 2 and 3 and named `<candidate>[-<style>].png`:
 
-| File            | Candidate           |
-| --------------- | ------------------- |
-| `ghost.png`     | Ghost Salem         |
-| `invisible.png` | Invisible Man Salem |
-| `detective.png` | Detective Salem     |
-| `mobboss.png`   | Mob Boss Salem      |
+| Candidate           | Variant 1       | Variant 2             | Variant 3                  |
+| ------------------- | --------------- | --------------------- | -------------------------- |
+| Ghost Salem         | `ghost.png`     | `ghost-light.png`     | `ghost-ultralight.png`     |
+| Invisible Man Salem | `invisible.png` | `invisible-light.png` | `invisible-ultralight.png` |
+| Detective Salem     | `detective.png` | `detective-light.png` | `detective-ultralight.png` |
+| Mob Boss Salem      | `mobboss.png`   | `mobboss-light.png`   | `mobboss-ultralight.png`   |
 
 ## Spec
 
-- Each file is a 1080×1080 PNG with a transparent background.
-- The overlay is drawn on top of the user's photo, which is cropped to a full 1080px circle. Anything outside that circle is cut off.
-- Keep the centre transparent so the face shows through. The placeholder ring is 150px wide (14% of the size), which leaves a clear photo circle of about 780px diameter.
-- Keep text and emblems inside the ring, at least ~10px from the outer edge.
+- Each file is a 1024×1024 PNG with a transparent background.
+- The user's photo is cropped to a circle centred on the image with a radius of 365px (`PHOTO_RADIUS` in `src/lib/render-frame.ts`). The artwork is drawn on top of it, unclipped, so decorations can overflow the circle.
+- A ring's inner edge should sit inside that 365px radius so it covers the edge of the photo.
+- Anything outside the photo circle shows the background the visitor picks: dark, white or transparent.
 
-After adding a file, set `overlaySrc: "/frames/<file>.png"` on that frame in `src/lib/frames.ts`. The overlay then replaces that frame's placeholder ring.
+To add a style or a candidate, add the PNGs here and add an entry to `STYLES` or `FRAMES` in `src/lib/frames.ts`.
