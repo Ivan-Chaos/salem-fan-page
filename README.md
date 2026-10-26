@@ -28,7 +28,7 @@ Add more shadcn components with `pnpm dlx shadcn@latest add <name>`.
 
 ## Halloween 2026 Election (`/halloween-2026`)
 
-Visitors upload a photo, then pick one of four Salem candidates, one of three frame variants and a background (dark, white or transparent). They download the result as a 1024×1024 PNG, either one variant or all three at once. Everything runs in the browser on a `<canvas>`, so photos never leave the device.
+Visitors upload a photo, then pick one of four Salem candidates, one of three frame variants and a background (dark, white or transparent). They download the result as a 1024×1024 PNG. Everything runs in the browser on a `<canvas>`, so photos never leave the device.
 
 - `src/components/frame-maker.tsx` is the upload, preview, zoom/drag and download UI.
 - `src/lib/render-frame.ts` handles drawing and exporting.

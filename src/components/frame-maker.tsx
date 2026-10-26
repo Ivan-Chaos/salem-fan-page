@@ -2,11 +2,10 @@
 
 import * as React from "react"
 import { cn } from "cn"
-import { ImagePlus } from "lucide-react"
+import { ImagePlus, Move } from "lucide-react"
 
 import { Panel } from "@/components/panel"
 import { Button } from "@/components/ui/button"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import {
   BACKGROUNDS,
   FRAMES,
@@ -47,7 +46,6 @@ function FrameMaker() {
   const [dragOver, setDragOver] = React.useState(false)
   const [busy, setBusy] = React.useState(false)
   const [overlays, setOverlays] = React.useState<Record<string, HTMLImageElement>>({})
-  const [canShare, setCanShare] = React.useState(false)
 
   const inputRef = React.useRef<HTMLInputElement>(null)
   const previewRef = React.useRef<HTMLCanvasElement>(null)
@@ -58,13 +56,6 @@ function FrameMaker() {
   const frame = FRAMES.find((f) => f.id === frameId)!
   const style = STYLES.find((s) => s.id === styleId)!
   const background = BACKGROUNDS.find((b) => b.id === backgroundId)!
-
-  React.useEffect(() => {
-    const probe = new File([""], "probe.png", { type: "image/png" })
-    Promise.resolve().then(() =>
-      setCanShare(Boolean(navigator.canShare?.({ files: [probe] })))
-    )
-  }, [])
 
   // Load only the artwork currently on screen: every candidate in the chosen
   // style, plus every style of the chosen candidate.
@@ -143,26 +134,16 @@ function FrameMaker() {
     return exportPng(photo!, adjust, background.color, overlay, `salem-2026-${frame.id}-${s}.png`)
   }
 
-  async function download(styleIds: StyleId[]) {
+  async function download() {
     if (!photo) return
     setBusy(true)
     try {
-      for (const s of styleIds) {
-        downloadFile(await render(s))
-        // Browsers drop rapid back-to-back downloads
-        if (styleIds.length > 1) await new Promise((r) => setTimeout(r, 400))
-      }
+      downloadFile(await render(styleId))
     } catch {
       setError("Something went wrong making your image. Try again.")
     } finally {
       setBusy(false)
     }
-  }
-
-  async function share() {
-    if (!photo) return
-    const file = await render(styleId)
-    await navigator.share({ files: [file], title: frame.name }).catch(() => {})
   }
 
   const checker = background.color ? undefined : CHECKERBOARD
@@ -248,26 +229,31 @@ function FrameMaker() {
 
         <Panel title="Adjust & download">
           <div className="flex flex-col items-center gap-5">
-            <Tooltip disabled={!photo} trackCursorAxis="both">
-              <TooltipTrigger render={<div className="w-full max-w-md" />}>
-                <canvas
-                  ref={previewRef}
-                  width={PREVIEW_SIZE}
-                  height={PREVIEW_SIZE}
-                  aria-label={`${frame.name}, ${style.name}, preview`}
-                  onPointerDown={onPointerDown}
-                  onPointerMove={onPointerMove}
-                  onPointerUp={onPointerUp}
-                  onPointerCancel={onPointerUp}
-                  style={checker}
-                  className={cn(
-                    "block aspect-square w-full touch-none rounded-md",
-                    photo && "cursor-grab active:cursor-grabbing"
-                  )}
-                />
-              </TooltipTrigger>
-              <TooltipContent className="text-base">Drag to reposition</TooltipContent>
-            </Tooltip>
+            <div className="flex w-full max-w-md flex-col items-center gap-2">
+              <canvas
+                ref={previewRef}
+                width={PREVIEW_SIZE}
+                height={PREVIEW_SIZE}
+                aria-label={`${frame.name}, ${style.name}, preview`}
+                aria-describedby="drag-tip"
+                onPointerDown={onPointerDown}
+                onPointerMove={onPointerMove}
+                onPointerUp={onPointerUp}
+                onPointerCancel={onPointerUp}
+                style={checker}
+                className={cn(
+                  "block aspect-square w-full touch-none rounded-md",
+                  photo && "cursor-grab active:cursor-grabbing"
+                )}
+              />
+              <p
+                id="drag-tip"
+                className="flex items-center gap-2 text-base text-muted-foreground italic"
+              >
+                <Move className="size-4 shrink-0 text-salem-eye/80" strokeWidth={1.5} />
+                Tip: drag the image to reposition your photo
+              </p>
+            </div>
             <p className="font-script text-4xl text-salem-eye">{frame.name}</p>
 
             <fieldset className="w-full max-w-md">
@@ -358,24 +344,9 @@ function FrameMaker() {
               </Button>
             </div>
 
-            <div className="flex flex-wrap justify-center gap-3">
-              <Button size="lg" disabled={!photo || busy} onClick={() => download([styleId])}>
-                Download
-              </Button>
-              <Button
-                variant="gold"
-                size="lg"
-                disabled={!photo || busy}
-                onClick={() => download(STYLES.map((s) => s.id))}
-              >
-                All 3 variants
-              </Button>
-              {canShare && (
-                <Button variant="gold" size="lg" disabled={!photo || busy} onClick={share}>
-                  Share
-                </Button>
-              )}
-            </div>
+            <Button size="lg" disabled={!photo || busy} onClick={download}>
+              Download
+            </Button>
           </div>
         </Panel>
       </div>
