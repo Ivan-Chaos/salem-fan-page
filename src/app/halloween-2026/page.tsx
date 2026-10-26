@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { FrameMaker } from "@/components/frame-maker";
+import { InAppBrowserNotice } from "@/components/in-app-browser-notice";
 
 export const metadata: Metadata = {
   title: "Halloween 2026 Election — Salem's Lair",
@@ -19,6 +20,8 @@ export default function Halloween2026Page() {
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-10 px-4 py-12">
+      <InAppBrowserNotice />
+
       <header className="flex flex-col items-center gap-3 text-center">
         <p className="font-heading text-xs tracking-[0.35em] text-salem-eye uppercase">
           Official Campaign Headquarters

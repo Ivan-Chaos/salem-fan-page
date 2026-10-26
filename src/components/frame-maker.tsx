@@ -7,6 +7,14 @@ import { ImagePlus, Move } from "lucide-react"
 import { Panel } from "@/components/panel"
 import { Button } from "@/components/ui/button"
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { useInAppBrowser } from "@/hooks/use-in-app-browser"
+import {
   BACKGROUNDS,
   FRAMES,
   STYLES,
@@ -36,6 +44,16 @@ const CHECKERBOARD = {
   background: "repeating-conic-gradient(#24202a 0 25%, #16131a 0 50%) 0 0 / 16px 16px",
 }
 
+// A data: URL rather than a blob: URL, so in-app browsers' "save image" works
+function readAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = () => reject(reader.error)
+    reader.readAsDataURL(file)
+  })
+}
+
 function FrameMaker() {
   const [photo, setPhoto] = React.useState<ImageBitmap | null>(null)
   const [frameId, setFrameId] = React.useState<FrameId>(FRAMES[0].id)
@@ -46,6 +64,9 @@ function FrameMaker() {
   const [dragOver, setDragOver] = React.useState(false)
   const [busy, setBusy] = React.useState(false)
   const [overlays, setOverlays] = React.useState<Record<string, HTMLImageElement>>({})
+  /** Finished image as a data URL, shown for press-and-hold saving in in-app browsers */
+  const [saveable, setSaveable] = React.useState<string | null>(null)
+  const inApp = useInAppBrowser()
 
   const inputRef = React.useRef<HTMLInputElement>(null)
   const previewRef = React.useRef<HTMLCanvasElement>(null)
@@ -138,7 +159,13 @@ function FrameMaker() {
     if (!photo) return
     setBusy(true)
     try {
-      downloadFile(await render(styleId))
+      const file = await render(styleId)
+      if (inApp) {
+        // In-app browsers ignore downloads; show the image to press-and-hold instead
+        setSaveable(await readAsDataUrl(file))
+      } else {
+        downloadFile(file)
+      }
     } catch {
       setError("Something went wrong making your image. Try again.")
     } finally {
@@ -345,7 +372,8 @@ function FrameMaker() {
             </div>
 
             <Button size="lg" disabled={!photo || busy} onClick={download}>
-              Download
+              {/* Encoding the PNG takes a couple of seconds on phones */}
+              {busy ? "Preparing…" : "Download"}
             </Button>
           </div>
         </Panel>
@@ -360,6 +388,28 @@ function FrameMaker() {
         </p>
         <p>Your photo is processed on your device and never uploaded anywhere.</p>
       </footer>
+
+      <Dialog open={saveable !== null} onOpenChange={(open) => !open && setSaveable(null)}>
+        <DialogContent className="panel max-w-sm bg-card">
+          <DialogHeader>
+            <DialogTitle className="font-script text-4xl font-normal text-salem-eye">
+              Save your picture
+            </DialogTitle>
+            <DialogDescription className="text-lg text-foreground">
+              Press and hold the picture, then choose “Save image” or “Add to Photos”.
+            </DialogDescription>
+          </DialogHeader>
+          {saveable && (
+            // eslint-disable-next-line @next/next/no-img-element -- a generated data: URL, not an optimisable asset
+            <img
+              src={saveable}
+              alt={`Your photo in the ${frame.name} frame`}
+              className="aspect-square w-full rounded-md"
+              style={checker}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
