@@ -1,0 +1,9 @@
+{
+  // Cloudflare Pages config. `pnpm build` writes the static export to ./out.
+  // Pages serves out/404.html for unknown URLs, which redirects to the
+  // election page.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "salem-fan-page",
+  "compatibility_date": "2026-10-19",
+  "pages_build_output_dir": "./out"
+}
